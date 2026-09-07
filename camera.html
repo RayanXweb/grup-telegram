@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera - Device Monitor</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/camera.css">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Device Monitor</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard.html">📊 Dashboard</a></li>
+                <li><a href="/devices.html">📱 Devices</a></li>
+                <li class="active"><a href="/camera.html">📷 Live Camera</a></li>
+                <li><a href="#" id="logoutBtn">🚪 Logout</a></li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <header class="top-header">
+                <h1>Live Camera</h1>
+                <div class="camera-controls">
+                    <button id="startCamera" class="btn-start">▶️ Start Stream</button>
+                    <button id="stopCamera" class="btn-stop" disabled>⏹️ Stop Stream</button>
+                    <button id="switchCamera" class="btn-switch" disabled>🔄 Switch Camera</button>
+                </div>
+            </header>
+            
+            <div class="camera-container">
+                <div id="cameraStatus" class="camera-status">
+                    <span class="status-text">Disconnected</span>
+                </div>
+                <video id="videoElement" class="camera-video" autoplay playsinline></video>
+                <div id="streamInfo" class="stream-info"></div>
+            </div>
+            
+            <div class="connection-status">
+                <span id="connectionState">Connection: Disconnected</span>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        import { initializeAuth } from './services/auth.js';
+        import { api } from './services/api.js';
+        import { socketService } from './services/socket.js';
+        import { WebRTCService } from './services/webrtc.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const auth = initializeAuth();
+            let webrtc = null;
+            let currentDeviceId = null;
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                // Get device ID from URL
+                const params = new URLSearchParams(window.location.search);
+                currentDeviceId = params.get('device');
+                
+                if (currentDeviceId) {
+                    await initializeWebRTC(user, currentDeviceId);
+                }
+            });
+            
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                if (webrtc) {
+                    webrtc.stopStream();
+                }
+                socketService.disconnect();
+                await auth.signOut();
+                window.location.href = '/login.html';
+            });
+            
+            document.getElementById('startCamera').addEventListener('click', async () => {
+                if (!currentDeviceId) {
+                    alert('No device selected');
+                    return;
+                }
+                
+                try {
+                    await webrtc.startStream(currentDeviceId);
+                    document.getElementById('startCamera').disabled = true;
+                    document.getElementById('stopCamera').disabled = false;
+                    document.getElementById('switchCamera').disabled = false;
+                    updateStatus('Streaming');
+                } catch (error) {
+                    console.error('Error starting stream:', error);
+                    alert('Failed to start camera stream');
+                }
+            });
+            
+            document.getElementById('stopCamera').addEventListener('click', () => {
+                webrtc.stopStream();
+                document.getElementById('startCamera').disabled = false;
+                document.getElementById('stopCamera').disabled = true;
+                document.getElementById('switchCamera').disabled = true;
+                updateStatus('Stopped');
+            });
+            
+            document.getElementById('switchCamera').addEventListener('click', () => {
+                webrtc.switchCamera();
+            });
+            
+            async function initializeWebRTC(user, deviceId) {
+                const token = await user.getIdToken();
+                
+                // Initialize socket
+                socketService.initialize(token);
+                
+                // Initialize WebRTC
+                webrtc = new WebRTCService(socketService, {
+                    onStreamStarted: () => {
+                        updateStatus('Streaming');
+                        document.getElementById('startCamera').disabled = true;
+                        document.getElementById('stopCamera').disabled = false;
+                        document.getElementById('switchCamera').disabled = false;
+                    },
+                    onStreamStopped: () => {
+                        updateStatus('Stopped');
+                        document.getElementById('startCamera').disabled = false;
+                        document.getElementById('stopCamera').disabled = true;
+                        document.getElementById('switchCamera').disabled = true;
+                    },
+                    onError: (error) => {
+                        console.error('WebRTC error:', error);
+                        updateStatus('Error: ' + error.message);
+                    },
+                    onConnectionStateChange: (state) => {
+                        document.getElementById('connectionState').textContent = `Connection: ${state}`;
+                    },
+                    onStreamInfo: (info) => {
+                        document.getElementById('streamInfo').textContent = 
+                            `Resolution: ${info.width}x${info.height} | FPS: ${info.fps}`;
+                    }
+                });
+                
+                // Initialize WebRTC
+                await webrtc.initialize(deviceId);
+                updateStatus('Ready');
+            }
+            
+            function updateStatus(status) {
+                const statusEl = document.querySelector('.status-text');
+                if (statusEl) {
+                    statusEl.textContent = status;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
