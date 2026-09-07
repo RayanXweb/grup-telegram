@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Device Monitor</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1a1a2e;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn-login:hover {
+            background: #357abd;
+        }
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .forgot-password a {
+            color: #4a90e2;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1 class="login-title">Device Monitor</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn-login">Login</button>
+            <div id="errorMessage" class="error-message"></div>
+            <div class="forgot-password">
+                <a href="#" id="forgotPassword">Lupa Password?</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        import { initializeAuth } from './services/auth.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const auth = initializeAuth();
+            const form = document.getElementById('loginForm');
+            const errorMsg = document.getElementById('errorMessage');
+            
+            // Check if already logged in
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    window.location.href = '/dashboard.html';
+                }
+            });
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                try {
+                    errorMsg.textContent = '';
+                    await auth.signInWithEmailAndPassword(email, password);
+                } catch (error) {
+                    errorMsg.textContent = getErrorMessage(error.code);
+                }
+            });
+            
+            document.getElementById('forgotPassword').addEventListener('click', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                if (!email) {
+                    errorMsg.textContent = 'Masukkan email terlebih dahulu';
+                    return;
+                }
+                
+                try {
+                    await auth.sendPasswordResetEmail(email);
+                    errorMsg.style.color = '#27ae60';
+                    errorMsg.textContent = 'Link reset password telah dikirim ke email Anda';
+                    setTimeout(() => {
+                        errorMsg.style.color = '#e74c3c';
+                        errorMsg.textContent = '';
+                    }, 5000);
+                } catch (error) {
+                    errorMsg.textContent = getErrorMessage(error.code);
+                }
+            });
+            
+            function getErrorMessage(code) {
+                const messages = {
+                    'auth/user-not-found': 'Email tidak ditemukan',
+                    'auth/wrong-password': 'Password salah',
+                    'auth/invalid-email': 'Format email tidak valid',
+                    'auth/too-many-requests': 'Terlalu banyak percobaan, coba lagi nanti',
+                    'auth/network-request-failed': 'Koneksi internet bermasalah'
+                };
+                return messages[code] || 'Terjadi kesalahan, silakan coba lagi';
+            }
+        });
+    </script>
+</body>
+</html>
