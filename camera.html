@@ -11,12 +11,13 @@
     <div class="app-container">
         <nav class="sidebar">
             <div class="sidebar-header">
-                <h2>Device Monitor</h2>
+                <h2>📹 Device Monitor</h2>
             </div>
             <ul class="sidebar-menu">
                 <li><a href="/dashboard.html">📊 Dashboard</a></li>
                 <li><a href="/devices.html">📱 Devices</a></li>
                 <li class="active"><a href="/camera.html">📷 Live Camera</a></li>
+                <li><a href="/settings.html">⚙️ Settings</a></li>
                 <li><a href="#" id="logoutBtn">🚪 Logout</a></li>
             </ul>
         </nav>
@@ -40,7 +41,7 @@
             </div>
             
             <div class="connection-status">
-                <span id="connectionState">Connection: Disconnected</span>
+                <span id="connectionState">🔌 Connection: Disconnected</span>
             </div>
         </main>
     </div>
@@ -65,19 +66,48 @@
                     return;
                 }
                 
-                // Get device ID from URL
                 const params = new URLSearchParams(window.location.search);
                 currentDeviceId = params.get('device');
                 
                 if (currentDeviceId) {
-                    await initializeWebRTC(user, currentDeviceId);
+                    const token = await user.getIdToken();
+                    socketService.initialize(token);
+                    
+                    webrtc = new WebRTCService(socketService, {
+                        onStreamStarted: () => {
+                            updateStatus('Streaming', 'success');
+                            document.getElementById('startCamera').disabled = true;
+                            document.getElementById('stopCamera').disabled = false;
+                            document.getElementById('switchCamera').disabled = false;
+                        },
+                        onStreamStopped: () => {
+                            updateStatus('Stopped', 'info');
+                            document.getElementById('startCamera').disabled = false;
+                            document.getElementById('stopCamera').disabled = true;
+                            document.getElementById('switchCamera').disabled = true;
+                        },
+                        onError: (error) => {
+                            updateStatus('Error: ' + error.message, 'error');
+                        },
+                        onConnectionStateChange: (state) => {
+                            document.getElementById('connectionState').textContent = 
+                                `🔌 Connection: ${state}`;
+                        },
+                        onStreamInfo: (info) => {
+                            document.getElementById('streamInfo').textContent = 
+                                `📊 Resolution: ${info.width}x${info.height} | FPS: ${info.fps}`;
+                        }
+                    });
+                    
+                    await webrtc.initialize(currentDeviceId);
+                    updateStatus('Ready', 'info');
+                } else {
+                    updateStatus('No device selected', 'error');
                 }
             });
             
             document.getElementById('logoutBtn').addEventListener('click', async () => {
-                if (webrtc) {
-                    webrtc.stopStream();
-                }
+                if (webrtc) webrtc.stopStream();
                 socketService.disconnect();
                 await auth.signOut();
                 window.location.href = '/login.html';
@@ -88,73 +118,26 @@
                     alert('No device selected');
                     return;
                 }
-                
                 try {
                     await webrtc.startStream(currentDeviceId);
-                    document.getElementById('startCamera').disabled = true;
-                    document.getElementById('stopCamera').disabled = false;
-                    document.getElementById('switchCamera').disabled = false;
-                    updateStatus('Streaming');
                 } catch (error) {
-                    console.error('Error starting stream:', error);
-                    alert('Failed to start camera stream');
+                    alert('Failed to start camera stream: ' + error.message);
                 }
             });
             
             document.getElementById('stopCamera').addEventListener('click', () => {
                 webrtc.stopStream();
-                document.getElementById('startCamera').disabled = false;
-                document.getElementById('stopCamera').disabled = true;
-                document.getElementById('switchCamera').disabled = true;
-                updateStatus('Stopped');
             });
             
             document.getElementById('switchCamera').addEventListener('click', () => {
                 webrtc.switchCamera();
             });
             
-            async function initializeWebRTC(user, deviceId) {
-                const token = await user.getIdToken();
-                
-                // Initialize socket
-                socketService.initialize(token);
-                
-                // Initialize WebRTC
-                webrtc = new WebRTCService(socketService, {
-                    onStreamStarted: () => {
-                        updateStatus('Streaming');
-                        document.getElementById('startCamera').disabled = true;
-                        document.getElementById('stopCamera').disabled = false;
-                        document.getElementById('switchCamera').disabled = false;
-                    },
-                    onStreamStopped: () => {
-                        updateStatus('Stopped');
-                        document.getElementById('startCamera').disabled = false;
-                        document.getElementById('stopCamera').disabled = true;
-                        document.getElementById('switchCamera').disabled = true;
-                    },
-                    onError: (error) => {
-                        console.error('WebRTC error:', error);
-                        updateStatus('Error: ' + error.message);
-                    },
-                    onConnectionStateChange: (state) => {
-                        document.getElementById('connectionState').textContent = `Connection: ${state}`;
-                    },
-                    onStreamInfo: (info) => {
-                        document.getElementById('streamInfo').textContent = 
-                            `Resolution: ${info.width}x${info.height} | FPS: ${info.fps}`;
-                    }
-                });
-                
-                // Initialize WebRTC
-                await webrtc.initialize(deviceId);
-                updateStatus('Ready');
-            }
-            
-            function updateStatus(status) {
+            function updateStatus(text, type = 'info') {
                 const statusEl = document.querySelector('.status-text');
                 if (statusEl) {
-                    statusEl.textContent = status;
+                    statusEl.textContent = text;
+                    statusEl.className = 'status-text ' + type;
                 }
             }
         });
