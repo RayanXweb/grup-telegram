@@ -1,0 +1,72 @@
+{
+    "version": 2,
+    "routes": [
+        {
+            "src": "/assets/(.*)",
+            "dest": "/assets/$1",
+            "headers": {
+                "Cache-Control": "public, max-age=31536000, immutable"
+            }
+        },
+        {
+            "src": "/(.*)\\.html",
+            "dest": "/$1.html"
+        },
+        {
+            "src": "/client/(.*)",
+            "dest": "/client.html"
+        },
+        {
+            "src": "/dashboard",
+            "dest": "/dashboard.html"
+        },
+        {
+            "src": "/devices",
+            "dest": "/devices.html"
+        },
+        {
+            "src": "/camera",
+            "dest": "/camera.html"
+        },
+        {
+            "src": "/settings",
+            "dest": "/settings.html"
+        },
+        {
+            "src": "/login",
+            "dest": "/login.html"
+        },
+        {
+            "src": "/",
+            "dest": "/login.html"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/404.html",
+            "status": 404
+        }
+    ],
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "X-Content-Type-Options",
+                    "value": "nosniff"
+                },
+                {
+                    "key": "X-Frame-Options",
+                    "value": "DENY"
+                },
+                {
+                    "key": "X-XSS-Protection",
+                    "value": "1; mode=block"
+                },
+                {
+                    "key": "Referrer-Policy",
+                    "value": "strict-origin-when-cross-origin"
+                }
+            ]
+        }
+    ]
+}
