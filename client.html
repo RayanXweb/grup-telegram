@@ -7,103 +7,168 @@
     <link rel="stylesheet" href="assets/css/main.css">
     <style>
         .client-container {
-            max-width: 800px;
-            margin: 50px auto;
+            max-width: 900px;
+            margin: 20px auto;
             padding: 20px;
         }
         .client-status {
             text-align: center;
-            padding: 40px;
+            padding: 30px;
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .status-indicator {
             display: inline-block;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             margin-right: 10px;
+            animation: pulse 1.5s infinite;
         }
-        .status-connected .status-indicator {
-            background: #27ae60;
-        }
-        .status-connecting .status-indicator {
-            background: #f39c12;
-            animation: pulse 1s infinite;
-        }
-        .status-disconnected .status-indicator {
-            background: #e74c3c;
-        }
-        .status-revoked .status-indicator {
-            background: #95a5a6;
-        }
-        .camera-container {
-            margin-top: 30px;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #clientVideo {
-            width: 100%;
-            max-height: 500px;
-            object-fit: contain;
-        }
-        .camera-controls {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .camera-controls button {
-            padding: 10px 20px;
-            margin: 0 5px;
-            background: #4a90e2;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .camera-controls button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .status-connected .status-indicator { background: #27ae60; }
+        .status-connecting .status-indicator { background: #f39c12; animation: pulse 1s infinite; }
+        .status-disconnected .status-indicator { background: #95a5a6; animation: none; }
+        .status-error .status-indicator { background: #e74c3c; animation: none; }
+        .status-revoked .status-indicator { background: #e74c3c; animation: none; }
+        .status-deleted .status-indicator { background: #e74c3c; animation: none; }
+        
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        
+        .status-text {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .status-detail {
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
         }
         .device-info {
-            margin-top: 20px;
+            margin-top: 15px;
             padding: 15px;
             background: #f8f9fa;
             border-radius: 4px;
         }
         .device-info p {
             margin: 5px 0;
+            font-size: 14px;
+        }
+        .camera-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+            position: relative;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #clientVideo {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+        }
+        .camera-placeholder {
+            color: #666;
+            font-size: 18px;
+            text-align: center;
+        }
+        .camera-controls {
+            text-align: center;
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .camera-controls button {
+            padding: 10px 24px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        .camera-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .camera-controls button:hover:not(:disabled) {
+            background: #357abd;
+        }
+        .btn-start-cam { background: #27ae60; }
+        .btn-start-cam:hover:not(:disabled) { background: #219a52; }
+        .btn-stop-cam { background: #e74c3c; }
+        .btn-stop-cam:hover:not(:disabled) { background: #c0392b; }
+        .btn-switch-cam { background: #8e44ad; }
+        .btn-switch-cam:hover:not(:disabled) { background: #7d3c98; }
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .device-name {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .back-link {
+            color: #4a90e2;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .client-container { padding: 10px; }
+            .device-name { font-size: 18px; }
+            .camera-controls button { flex: 1; min-width: 80px; }
+            .status-text { font-size: 16px; }
         }
     </style>
 </head>
 <body>
     <div class="client-container">
+        <div class="header-info">
+            <span class="device-name" id="deviceName">Device Monitor</span>
+            <a href="/" class="back-link">← Back</a>
+        </div>
+        
         <div id="clientStatus" class="client-status status-connecting">
             <div>
                 <span class="status-indicator"></span>
-                <span id="statusText">Connecting...</span>
+                <span class="status-text" id="statusText">Connecting...</span>
             </div>
-            <div id="statusDetail" class="status-detail"></div>
+            <div class="status-detail" id="statusDetail">Initializing connection</div>
         </div>
         
         <div class="device-info" id="deviceInfo" style="display:none">
-            <p><strong>Device:</strong> <span id="deviceName">-</span></p>
-            <p><strong>Status:</strong> <span id="deviceStatus">-</span></p>
+            <p><strong>Device:</strong> <span id="deviceNameDisplay">-</span></p>
+            <p><strong>Status:</strong> <span id="deviceStatusDisplay">-</span></p>
+            <p><strong>Client ID:</strong> <span id="clientIdDisplay">-</span></p>
         </div>
         
-        <div class="camera-container" id="cameraContainer" style="display:none">
-            <video id="clientVideo" autoplay playsinline></video>
+        <div class="camera-container" id="cameraContainer">
+            <video id="clientVideo" autoplay playsinline style="display:none"></video>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+                📷 Camera ready<br>
+                <small>Click "Start Camera" to begin streaming</small>
+            </div>
         </div>
         
         <div class="camera-controls">
-            <button id="startStreamBtn" disabled>▶️ Start Camera</button>
-            <button id="stopStreamBtn" disabled>⏹️ Stop Camera</button>
-            <button id="switchCamBtn" disabled>🔄 Switch Camera</button>
+            <button id="startStreamBtn" class="btn-start-cam" disabled>▶️ Start Camera</button>
+            <button id="stopStreamBtn" class="btn-stop-cam" disabled>⏹️ Stop Camera</button>
+            <button id="switchCamBtn" class="btn-switch-cam" disabled>🔄 Switch</button>
         </div>
     </div>
 
@@ -116,17 +181,15 @@
         import { WebRTCService } from './services/webrtc.js';
         
         document.addEventListener('DOMContentLoaded', async () => {
-            // Get device ID from URL
             const pathSegments = window.location.pathname.split('/');
             const deviceId = pathSegments[pathSegments.length - 1];
             
-            if (!deviceId) {
-                showStatus('Error', 'Device not found');
+            if (!deviceId || deviceId === 'client.html') {
+                showStatus('Error', 'Invalid device ID');
                 return;
             }
             
             try {
-                // Validate device
                 const device = await api.get(`/devices/${deviceId}`);
                 
                 if (!device) {
@@ -135,7 +198,7 @@
                 }
                 
                 if (device.status === 'revoked') {
-                    showStatus('Revoked', 'Device has been revoked');
+                    showStatus('Revoked', 'Device has been revoked by administrator');
                     return;
                 }
                 
@@ -144,22 +207,20 @@
                     return;
                 }
                 
-                // Show device info
                 document.getElementById('deviceInfo').style.display = 'block';
-                document.getElementById('deviceName').textContent = device.name || 'Unnamed Device';
-                document.getElementById('deviceStatus').textContent = device.status;
+                document.getElementById('deviceNameDisplay').textContent = device.name || 'Unnamed Device';
+                document.getElementById('deviceStatusDisplay').textContent = device.status;
+                document.getElementById('clientIdDisplay').textContent = device.clientId || 'Not assigned';
+                document.getElementById('deviceName').textContent = device.name || 'Device Monitor';
                 
-                // Initialize socket with device context
                 socketService.initialize(null, { deviceId });
-                
-                // Setup socket listeners
                 setupSocketListeners(deviceId);
                 
-                // Initialize WebRTC
                 const webrtc = new WebRTCService(socketService, {
                     onStreamStarted: () => {
                         showStatus('Connected', 'Camera stream active');
-                        document.getElementById('cameraContainer').style.display = 'block';
+                        document.getElementById('cameraPlaceholder').style.display = 'none';
+                        document.getElementById('clientVideo').style.display = 'block';
                         document.getElementById('startStreamBtn').disabled = true;
                         document.getElementById('stopStreamBtn').disabled = false;
                         document.getElementById('switchCamBtn').disabled = false;
@@ -178,11 +239,8 @@
                 });
                 
                 await webrtc.initialize(deviceId);
-                
-                // Store webrtc instance globally for button handlers
                 window.webrtc = webrtc;
                 
-                // Setup camera controls
                 document.getElementById('startStreamBtn').addEventListener('click', async () => {
                     try {
                         await webrtc.startStream(deviceId);
@@ -199,13 +257,11 @@
                     webrtc.switchCamera();
                 });
                 
-                // Auto-start stream after connection
                 setTimeout(async () => {
                     try {
                         await webrtc.startStream(deviceId);
                     } catch (error) {
                         console.error('Auto-start failed:', error);
-                        // Allow manual start
                         document.getElementById('startStreamBtn').disabled = false;
                     }
                 }, 2000);
@@ -214,9 +270,9 @@
                 
             } catch (error) {
                 console.error('Client initialization error:', error);
-                if (error.response && error.response.status === 404) {
+                if (error.status === 404) {
                     showStatus('Error', 'Device not found');
-                } else if (error.response && error.response.status === 403) {
+                } else if (error.status === 403) {
                     showStatus('Revoked', 'Device has been revoked or deleted');
                 } else {
                     showStatus('Error', 'Failed to connect to device');
@@ -227,13 +283,11 @@
         function setupSocketListeners(deviceId) {
             socketService.on('device:status', (data) => {
                 if (data.deviceId === deviceId) {
-                    document.getElementById('deviceStatus').textContent = data.status;
-                    
+                    document.getElementById('deviceStatusDisplay').textContent = data.status;
                     if (data.status === 'revoked' || data.status === 'deleted') {
                         showStatus(data.status.toUpperCase(), 'Device is no longer active');
-                        if (window.webrtc) {
-                            window.webrtc.stopStream();
-                        }
+                        if (window.webrtc) window.webrtc.stopStream();
+                        document.querySelectorAll('.camera-controls button').forEach(btn => btn.disabled = true);
                     }
                 }
             });
@@ -241,18 +295,16 @@
             socketService.on('device:revoked', (data) => {
                 if (data.deviceId === deviceId) {
                     showStatus('Revoked', 'Device has been revoked');
-                    if (window.webrtc) {
-                        window.webrtc.stopStream();
-                    }
+                    if (window.webrtc) window.webrtc.stopStream();
+                    document.querySelectorAll('.camera-controls button').forEach(btn => btn.disabled = true);
                 }
             });
             
             socketService.on('device:deleted', (data) => {
                 if (data.deviceId === deviceId) {
                     showStatus('Deleted', 'Device has been deleted');
-                    if (window.webrtc) {
-                        window.webrtc.stopStream();
-                    }
+                    if (window.webrtc) window.webrtc.stopStream();
+                    document.querySelectorAll('.camera-controls button').forEach(btn => btn.disabled = true);
                 }
             });
         }
@@ -262,20 +314,14 @@
             const statusText = document.getElementById('statusText');
             const statusDetail = document.getElementById('statusDetail');
             
-            // Remove all status classes
             container.className = 'client-status';
             container.classList.add(`status-${status.toLowerCase()}`);
             
             statusText.textContent = status;
             statusDetail.textContent = detail;
             
-            if (status.toLowerCase() === 'error' || 
-                status.toLowerCase() === 'revoked' || 
-                status.toLowerCase() === 'deleted') {
-                // Disable all buttons
-                document.querySelectorAll('.camera-controls button').forEach(btn => {
-                    btn.disabled = true;
-                });
+            if (['error', 'revoked', 'deleted'].includes(status.toLowerCase())) {
+                document.querySelectorAll('.camera-controls button').forEach(btn => btn.disabled = true);
             }
         }
     </script>
