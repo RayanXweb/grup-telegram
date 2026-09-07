@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devices - Device Monitor</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/devices.css">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Device Monitor</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard.html">📊 Dashboard</a></li>
+                <li class="active"><a href="/devices.html">📱 Devices</a></li>
+                <li><a href="/camera.html">📷 Live Camera</a></li>
+                <li><a href="#" id="logoutBtn">🚪 Logout</a></li>
+            </ul>
+        </nav>
+        
+        <main class="main-content">
+            <header class="top-header">
+                <h1>Devices</h1>
+                <div class="header-actions">
+                    <button id="refreshBtn" class="btn-refresh">🔄 Refresh</button>
+                </div>
+            </header>
+            
+            <div id="devicesList" class="devices-grid">
+                <div class="loading">Loading devices...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Device Detail Modal -->
+    <div id="deviceModal" class="modal" style="display:none">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Device Details</h2>
+            <div id="deviceDetail"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        import { initializeAuth } from './services/auth.js';
+        import { api } from './services/api.js';
+        import { socketService } from './services/socket.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const auth = initializeAuth();
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                await loadDevices();
+            });
+            
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await auth.signOut();
+                socketService.disconnect();
+                window.location.href = '/login.html';
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', loadDevices);
+            
+            // Modal close
+            document.querySelector('.close-modal').addEventListener('click', () => {
+                document.getElementById('deviceModal').style.display = 'none';
+            });
+        });
+        
+        async function loadDevices() {
+            try {
+                const devices = await api.get('/devices');
+                const container = document.getElementById('devicesList');
+                
+                if (!devices || devices.length === 0) {
+                    container.innerHTML = '<p class="empty-state">No devices found</p>';
+                    return;
+                }
+                
+                container.innerHTML = devices.map(device => `
+                    <div class="device-card" data-id="${device.id}">
+                        <div class="device-header">
+                            <h3>${device.name || 'Unnamed Device'}</h3>
+                            <span class="status-badge ${device.status}">${device.status}</span>
+                        </div>
+                        <div class="device-info">
+                            <p>📱 ID: ${device.id}</p>
+                            <p>🔗 Client: ${device.clientId || 'Not connected'}</p>
+                            <p>🕐 Last Seen: ${device.lastSeen ? new Date(device.lastSeen).toLocaleString() : 'Never'}</p>
+                            <p>📷 Camera: ${device.hasCamera ? '✅ Available' : '❌ Not available'}</p>
+                        </div>
+                        <div class="device-actions">
+                            <button onclick="viewDevice('${device.id}')" class="btn-detail">View Details</button>
+                            ${device.status === 'online' ? 
+                                `<button onclick="viewCamera('${device.id}')" class="btn-camera">📷 Live Camera</button>` : 
+                                ''}
+                            <button onclick="generateClientUrl('${device.id}')" class="btn-url">🔗 Generate URL</button>
+                            ${device.status !== 'revoked' ?
+                                `<button onclick="revokeDevice('${device.id}')" class="btn-revoke">🚫 Revoke</button>` :
+                                ''}
+                            <button onclick="deleteDevice('${device.id}')" class="btn-delete">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('devicesList').innerHTML = '<p class="error">Failed to load devices</p>';
+            }
+        }
+        
+        window.viewDevice = async function(deviceId) {
+            try {
+                const device = await api.get(`/devices/${deviceId}`);
+                const modal = document.getElementById('deviceModal');
+                const content = document.getElementById('deviceDetail');
+                
+                content.innerHTML = `
+                    <div class="device-detail">
+                        <p><strong>ID:</strong> ${device.id}</p>
+                        <p><strong>Name:</strong> ${device.name || 'Unnamed'}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${device.status}">${device.status}</span></p>
+                        <p><strong>Client:</strong> ${device.clientId || 'None'}</p>
+                        <p><strong>Last Seen:</strong> ${device.lastSeen ? new Date(device.lastSeen).toLocaleString() : 'Never'}</p>
+                        <p><strong>Has Camera:</strong> ${device.hasCamera ? '✅ Yes' : '❌ No'}</p>
+                        <p><strong>Client URL:</strong> ${device.clientUrl ? `<a href="${device.clientUrl}" target="_blank">${device.clientUrl}</a>` : 'Not generated'}</p>
+                    </div>
+                `;
+                modal.style.display = 'block';
+            } catch (error) {
+                console.error('Error viewing device:', error);
+                alert('Failed to load device details');
+            }
+        };
+        
+        window.viewCamera = function(deviceId) {
+            window.location.href = `/camera.html?device=${deviceId}`;
+        };
+        
+        window.generateClientUrl = async function(deviceId) {
+            try {
+                const result = await api.post(`/devices/${deviceId}/client-url`);
+                const url = result.url;
+                
+                // Copy to clipboard
+                await navigator.clipboard.writeText(url);
+                alert(`Client URL generated and copied to clipboard:\n${url}`);
+                
+                // Refresh devices
+                await loadDevices();
+            } catch (error) {
+                console.error('Error generating client URL:', error);
+                alert('Failed to generate client URL');
+            }
+        };
+        
+        window.revokeDevice = async function(deviceId) {
+            if (!confirm('Are you sure you want to revoke this device?')) return;
+            
+            try {
+                await api.post(`/devices/${deviceId}/revoke`);
+                alert('Device revoked successfully');
+                await loadDevices();
+            } catch (error) {
+                console.error('Error revoking device:', error);
+                alert('Failed to revoke device');
+            }
+        };
+        
+        window.deleteDevice = async function(deviceId) {
+            if (!confirm('Are you sure you want to delete this device permanently?')) return;
+            
+            try {
+                await api.delete(`/devices/${deviceId}`);
+                alert('Device deleted successfully');
+                await loadDevices();
+            } catch (error) {
+                console.error('Error deleting device:', error);
+                alert('Failed to delete device');
+            }
+        };
+        
+        // Add to window for inline onclick handlers
+        window.loadDevices = loadDevices;
+    </script>
+</body>
+</html>
