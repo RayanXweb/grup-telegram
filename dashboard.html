@@ -9,29 +9,28 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
-                <h2>Device Monitor</h2>
+                <h2>📹 Device Monitor</h2>
             </div>
             <ul class="sidebar-menu">
                 <li class="active"><a href="/dashboard.html">📊 Dashboard</a></li>
                 <li><a href="/devices.html">📱 Devices</a></li>
                 <li><a href="/camera.html">📷 Live Camera</a></li>
+                <li><a href="/settings.html">⚙️ Settings</a></li>
                 <li><a href="#" id="logoutBtn">🚪 Logout</a></li>
             </ul>
         </nav>
         
-        <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
                 <h1>Dashboard</h1>
                 <div class="user-info">
                     <span id="userEmail"></span>
+                    <span class="status-dot online"></span>
                 </div>
             </header>
             
-            <!-- Stats Cards -->
             <section class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon">📱</div>
@@ -77,11 +76,10 @@
                 </div>
             </section>
             
-            <!-- Recent Activity -->
             <section class="recent-activity">
                 <h2>Recent Activity</h2>
                 <div id="activityLog" class="activity-log">
-                    <p class="loading">Loading activities...</p>
+                    <div class="loading">Loading activities...</div>
                 </div>
             </section>
         </main>
@@ -98,7 +96,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const auth = initializeAuth();
             
-            // Check auth
             auth.onAuthStateChanged(async (user) => {
                 if (!user) {
                     window.location.href = '/login.html';
@@ -107,13 +104,11 @@
                 document.getElementById('userEmail').textContent = user.email;
                 await loadDashboardData();
                 
-                // Initialize socket
                 const token = await user.getIdToken();
                 socketService.initialize(token);
                 setupSocketListeners();
             });
             
-            // Logout
             document.getElementById('logoutBtn').addEventListener('click', async () => {
                 await auth.signOut();
                 socketService.disconnect();
@@ -123,9 +118,10 @@
         
         async function loadDashboardData() {
             try {
-                const [devices, clients] = await Promise.all([
+                const [devices, clients, activities] = await Promise.all([
                     api.get('/devices'),
-                    api.get('/clients')
+                    api.get('/clients'),
+                    api.get('/activities?limit=10')
                 ]);
                 
                 const total = devices.length;
@@ -142,56 +138,32 @@
                 document.getElementById('revokedClients').textContent = revokedClients;
                 document.getElementById('camerasAvailable').textContent = camerasAvailable;
                 
-                // Load recent activities
-                await loadRecentActivities();
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                showError('Failed to load dashboard data');
-            }
-        }
-        
-        async function loadRecentActivities() {
-            try {
-                const activities = await api.get('/activities?limit=10');
                 const container = document.getElementById('activityLog');
-                
                 if (!activities || activities.length === 0) {
-                    container.innerHTML = '<p class="empty-state">No recent activities</p>';
+                    container.innerHTML = '<div class="empty-state">No recent activities</div>';
                     return;
                 }
                 
                 container.innerHTML = activities.map(activity => `
                     <div class="activity-item">
-                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString()}</span>
-                        <span class="activity-type">${activity.type}</span>
+                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString('id-ID')}</span>
+                        <span class="activity-type ${activity.type}">${activity.type}</span>
                         <span class="activity-desc">${activity.description}</span>
                     </div>
                 `).join('');
             } catch (error) {
-                console.error('Error loading activities:', error);
+                console.error('Error loading dashboard:', error);
+                document.getElementById('activityLog').innerHTML = 
+                    '<div class="error">Failed to load data</div>';
             }
         }
         
         function setupSocketListeners() {
-            socketService.on('device:status', (data) => {
-                console.log('Device status update:', data);
-                loadDashboardData(); // Refresh stats
-            });
-            
-            socketService.on('client:connect', (data) => {
-                console.log('Client connected:', data);
-                loadDashboardData();
-            });
-            
-            socketService.on('client:disconnect', (data) => {
-                console.log('Client disconnected:', data);
-                loadDashboardData();
-            });
-        }
-        
-        function showError(message) {
-            // Simple error handling
-            console.error(message);
+            socketService.on('device:status', () => loadDashboardData());
+            socketService.on('client:connect', () => loadDashboardData());
+            socketService.on('client:disconnect', () => loadDashboardData());
+            socketService.on('device:revoked', () => loadDashboardData());
+            socketService.on('device:deleted', () => loadDashboardData());
         }
     </script>
 </body>
