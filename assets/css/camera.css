@@ -1,0 +1,112 @@
+.camera-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.camera-controls button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: opacity 0.2s;
+}
+
+.camera-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-start {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-start:hover:not(:disabled) {
+    background: #219a52;
+}
+
+.btn-stop {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-stop:hover:not(:disabled) {
+    background: #c0392b;
+}
+
+.btn-switch {
+    background: #8e44ad;
+    color: white;
+}
+
+.btn-switch:hover:not(:disabled) {
+    background: #7d3c98;
+}
+
+.camera-container {
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    position: relative;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-video {
+    width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.camera-status {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 10;
+}
+
+.status-text {
+    font-weight: 500;
+}
+
+.stream-info {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.connection-status {
+    margin-top: 15px;
+    text-align: center;
+    color: #718096;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .camera-controls {
+        flex-wrap: wrap;
+    }
+    
+    .camera-controls button {
+        flex: 1;
+        min-width: 100px;
+    }
+    
+    .camera-status {
+        top: 15px;
+        right: 15px;
+        font-size: 12px;
+        padding: 4px 12px;
+    }
+}
