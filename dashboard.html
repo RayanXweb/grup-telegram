@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Device Monitor</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Device Monitor</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="/dashboard.html">📊 Dashboard</a></li>
+                <li><a href="/devices.html">📱 Devices</a></li>
+                <li><a href="/camera.html">📷 Live Camera</a></li>
+                <li><a href="#" id="logoutBtn">🚪 Logout</a></li>
+            </ul>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1>Dashboard</h1>
+                <div class="user-info">
+                    <span id="userEmail"></span>
+                </div>
+            </header>
+            
+            <!-- Stats Cards -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📱</div>
+                    <div class="stat-info">
+                        <h3 id="totalDevices">0</h3>
+                        <p>Total Devices</p>
+                    </div>
+                </div>
+                <div class="stat-card online">
+                    <div class="stat-icon">🟢</div>
+                    <div class="stat-info">
+                        <h3 id="onlineDevices">0</h3>
+                        <p>Online</p>
+                    </div>
+                </div>
+                <div class="stat-card offline">
+                    <div class="stat-icon">🔴</div>
+                    <div class="stat-info">
+                        <h3 id="offlineDevices">0</h3>
+                        <p>Offline</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <h3 id="activeClients">0</h3>
+                        <p>Active Clients</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🚫</div>
+                    <div class="stat-info">
+                        <h3 id="revokedClients">0</h3>
+                        <p>Revoked</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📷</div>
+                    <div class="stat-info">
+                        <h3 id="camerasAvailable">0</h3>
+                        <p>Cameras Available</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Recent Activity -->
+            <section class="recent-activity">
+                <h2>Recent Activity</h2>
+                <div id="activityLog" class="activity-log">
+                    <p class="loading">Loading activities...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        import { initializeAuth } from './services/auth.js';
+        import { api } from './services/api.js';
+        import { socketService } from './services/socket.js';
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const auth = initializeAuth();
+            
+            // Check auth
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                document.getElementById('userEmail').textContent = user.email;
+                await loadDashboardData();
+                
+                // Initialize socket
+                const token = await user.getIdToken();
+                socketService.initialize(token);
+                setupSocketListeners();
+            });
+            
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await auth.signOut();
+                socketService.disconnect();
+                window.location.href = '/login.html';
+            });
+        });
+        
+        async function loadDashboardData() {
+            try {
+                const [devices, clients] = await Promise.all([
+                    api.get('/devices'),
+                    api.get('/clients')
+                ]);
+                
+                const total = devices.length;
+                const online = devices.filter(d => d.status === 'online').length;
+                const offline = devices.filter(d => d.status === 'offline').length;
+                const activeClients = clients.filter(c => c.status === 'active').length;
+                const revokedClients = clients.filter(c => c.status === 'revoked').length;
+                const camerasAvailable = devices.filter(d => d.hasCamera).length;
+                
+                document.getElementById('totalDevices').textContent = total;
+                document.getElementById('onlineDevices').textContent = online;
+                document.getElementById('offlineDevices').textContent = offline;
+                document.getElementById('activeClients').textContent = activeClients;
+                document.getElementById('revokedClients').textContent = revokedClients;
+                document.getElementById('camerasAvailable').textContent = camerasAvailable;
+                
+                // Load recent activities
+                await loadRecentActivities();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+        
+        async function loadRecentActivities() {
+            try {
+                const activities = await api.get('/activities?limit=10');
+                const container = document.getElementById('activityLog');
+                
+                if (!activities || activities.length === 0) {
+                    container.innerHTML = '<p class="empty-state">No recent activities</p>';
+                    return;
+                }
+                
+                container.innerHTML = activities.map(activity => `
+                    <div class="activity-item">
+                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString()}</span>
+                        <span class="activity-type">${activity.type}</span>
+                        <span class="activity-desc">${activity.description}</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading activities:', error);
+            }
+        }
+        
+        function setupSocketListeners() {
+            socketService.on('device:status', (data) => {
+                console.log('Device status update:', data);
+                loadDashboardData(); // Refresh stats
+            });
+            
+            socketService.on('client:connect', (data) => {
+                console.log('Client connected:', data);
+                loadDashboardData();
+            });
+            
+            socketService.on('client:disconnect', (data) => {
+                console.log('Client disconnected:', data);
+                loadDashboardData();
+            });
+        }
+        
+        function showError(message) {
+            // Simple error handling
+            console.error(message);
+        }
+    </script>
+</body>
+</html>
