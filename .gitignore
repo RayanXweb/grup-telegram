@@ -3,15 +3,16 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Build output
+# Build
 dist/
 build/
 .vite/
 
-# Environment variables
+# Environment
 .env
 .env.local
 .env.*.local
+*.env
 
 # IDE
 .vscode/
@@ -30,7 +31,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Temporary files
+# Temp
 tmp/
 temp/
 *.tmp
+
+# Vercel
+.vercel/
