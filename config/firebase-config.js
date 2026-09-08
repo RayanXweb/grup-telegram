@@ -1,4 +1,3 @@
-// Firebase configuration - loaded from environment variables
 export const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -8,9 +7,13 @@ export const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Validate config
-Object.entries(firebaseConfig).forEach(([key, value]) => {
-    if (!value) {
-        console.warn(`Firebase config ${key} is not set`);
-    }
-});
+// Validate all required config
+const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
+const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
+
+if (missingKeys.length > 0) {
+    console.error('❌ Missing Firebase config:', missingKeys.join(', '));
+    console.error('Please check your environment variables');
+}
+
+export default firebaseConfig;
