@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite';
+import legacy from '@vitejs/plugin-legacy';
 
 export default defineConfig({
+    plugins: [
+        legacy({
+            targets: ['defaults', 'not IE 11']
+        })
+    ],
     build: {
         rollupOptions: {
             input: {
@@ -21,7 +27,9 @@ export default defineConfig({
         },
         sourcemap: false,
         minify: 'terser',
-        target: 'es2020'
+        target: 'es2020',
+        outDir: 'dist',
+        emptyOutDir: true
     },
     server: {
         port: 3000,
