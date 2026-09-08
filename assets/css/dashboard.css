@@ -6,7 +6,7 @@
 }
 
 .recent-activity {
-    background: white;
+    background: var(--white);
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -15,7 +15,7 @@
 .recent-activity h2 {
     margin-bottom: 20px;
     font-size: 18px;
-    color: #2d3748;
+    color: var(--text);
 }
 
 .activity-log {
@@ -26,8 +26,9 @@
 .activity-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 12px 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border);
     font-size: 14px;
 }
 
@@ -36,26 +37,53 @@
 }
 
 .activity-time {
-    color: #718096;
+    color: var(--text-light);
     min-width: 150px;
+    font-size: 12px;
 }
 
 .activity-type {
     font-weight: 500;
     min-width: 100px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    text-transform: uppercase;
 }
 
+.activity-type.device_created { background: #d4edda; color: #155724; }
+.activity-type.device_updated { background: #d1ecf1; color: #0c5460; }
+.activity-type.device_deleted { background: #f8d7da; color: #721c24; }
+.activity-type.device_revoked { background: #fff3cd; color: #856404; }
+.activity-type.client_connected { background: #d4edda; color: #155724; }
+.activity-type.client_disconnected { background: #f8d7da; color: #721c24; }
+.activity-type.camera_stream_started { background: #d1ecf1; color: #0c5460; }
+.activity-type.camera_stream_stopped { background: #f8d7da; color: #721c24; }
+
 .activity-desc {
-    color: #2d3748;
+    color: var(--text);
+    flex: 1;
+    margin-left: 10px;
 }
 
 @media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
     .activity-item {
-        flex-direction: column;
+        flex-wrap: wrap;
         gap: 5px;
     }
     
     .activity-time {
         min-width: auto;
+        width: 100%;
+    }
+    
+    .activity-desc {
+        margin-left: 0;
+        width: 100%;
     }
 }
