@@ -1,23 +1,9 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "**/*.html",
-            "use": "@vercel/static-build"
-        },
-        {
-            "src": "assets/**/*",
-            "use": "@vercel/static-build"
-        },
-        {
-            "src": "config/**/*",
-            "use": "@vercel/static-build"
-        },
-        {
-            "src": "services/**/*",
-            "use": "@vercel/static-build"
-        }
-    ],
+    "buildCommand": "npm install && npm run build",
+    "outputDirectory": "dist",
+    "installCommand": "npm install --production=false",
+    "framework": "vite",
     "routes": [
         {
             "src": "/assets/(.*)",
@@ -66,29 +52,6 @@
             "src": "/(.*)",
             "dest": "/404.html",
             "status": 404
-        }
-    ],
-    "headers": [
-        {
-            "source": "/(.*)",
-            "headers": [
-                {
-                    "key": "X-Content-Type-Options",
-                    "value": "nosniff"
-                },
-                {
-                    "key": "X-Frame-Options",
-                    "value": "DENY"
-                },
-                {
-                    "key": "X-XSS-Protection",
-                    "value": "1; mode=block"
-                },
-                {
-                    "key": "Referrer-Policy",
-                    "value": "strict-origin-when-cross-origin"
-                }
-            ]
         }
     ]
 }
