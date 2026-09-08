@@ -4,10 +4,25 @@
     box-sizing: border-box;
 }
 
+:root {
+    --primary: #4a90e2;
+    --primary-dark: #357abd;
+    --success: #27ae60;
+    --danger: #e74c3c;
+    --warning: #f39c12;
+    --gray: #95a5a6;
+    --dark: #1a1a2e;
+    --light: #f5f7fb;
+    --white: #ffffff;
+    --text: #2d3748;
+    --text-light: #718096;
+    --border: #e2e8f0;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: #f5f7fb;
-    color: #2d3748;
+    background: var(--light);
+    color: var(--text);
 }
 
 .app-container {
@@ -18,18 +33,21 @@ body {
 /* Sidebar */
 .sidebar {
     width: 250px;
-    background: #1a1a2e;
+    background: var(--dark);
     color: white;
     padding: 20px 0;
     position: fixed;
     height: 100vh;
     left: 0;
     top: 0;
+    z-index: 100;
+    overflow-y: auto;
 }
 
 .sidebar-header {
     padding: 0 20px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 10px;
 }
 
 .sidebar-header h2 {
@@ -39,11 +57,11 @@ body {
 
 .sidebar-menu {
     list-style: none;
-    padding: 20px 0;
+    padding: 0;
 }
 
 .sidebar-menu li {
-    margin: 5px 0;
+    margin: 2px 0;
 }
 
 .sidebar-menu a {
@@ -54,6 +72,7 @@ body {
     text-decoration: none;
     transition: all 0.3s;
     border-left: 3px solid transparent;
+    font-size: 14px;
 }
 
 .sidebar-menu a:hover {
@@ -64,7 +83,7 @@ body {
 .sidebar-menu li.active a {
     color: white;
     background: rgba(255,255,255,0.1);
-    border-left-color: #4a90e2;
+    border-left-color: var(--primary);
 }
 
 /* Main Content */
@@ -72,6 +91,7 @@ body {
     margin-left: 250px;
     flex: 1;
     padding: 20px;
+    min-height: 100vh;
 }
 
 .top-header {
@@ -79,7 +99,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    background: white;
+    background: var(--white);
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-bottom: 20px;
@@ -91,17 +111,36 @@ body {
 }
 
 .user-info {
-    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-light);
 }
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.status-dot.online { background: var(--success); }
+.status-dot.offline { background: var(--danger); }
 
 /* Cards */
 .stat-card {
-    background: white;
+    background: var(--white);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     display: flex;
     align-items: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .stat-icon {
@@ -112,32 +151,46 @@ body {
 .stat-info h3 {
     font-size: 28px;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--text);
 }
 
 .stat-info p {
-    color: #718096;
+    color: var(--text-light);
     font-size: 14px;
 }
 
 /* Buttons */
 .btn-refresh {
     padding: 8px 16px;
-    background: #4a90e2;
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
+    transition: background 0.2s;
 }
 
 .btn-refresh:hover {
-    background: #357abd;
+    background: var(--primary-dark);
 }
 
 .btn-detail {
     padding: 6px 12px;
-    background: #4a90e2;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: opacity 0.2s;
+}
+
+.btn-detail:hover { opacity: 0.8; }
+
+.btn-camera {
+    padding: 6px 12px;
+    background: var(--success);
     color: white;
     border: none;
     border-radius: 4px;
@@ -145,15 +198,7 @@ body {
     font-size: 12px;
 }
 
-.btn-camera {
-    padding: 6px 12px;
-    background: #27ae60;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
+.btn-camera:hover { opacity: 0.8; }
 
 .btn-url {
     padding: 6px 12px;
@@ -165,9 +210,11 @@ body {
     font-size: 12px;
 }
 
+.btn-url:hover { opacity: 0.8; }
+
 .btn-revoke {
     padding: 6px 12px;
-    background: #f39c12;
+    background: var(--warning);
     color: white;
     border: none;
     border-radius: 4px;
@@ -175,15 +222,19 @@ body {
     font-size: 12px;
 }
 
+.btn-revoke:hover { opacity: 0.8; }
+
 .btn-delete {
     padding: 6px 12px;
-    background: #e74c3c;
+    background: var(--danger);
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
 }
+
+.btn-delete:hover { opacity: 0.8; }
 
 /* Status Badges */
 .status-badge {
@@ -192,6 +243,7 @@ body {
     border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
+    text-transform: uppercase;
 }
 
 .status-badge.online {
@@ -218,20 +270,20 @@ body {
 .loading {
     text-align: center;
     padding: 40px;
-    color: #718096;
+    color: var(--text-light);
 }
 
 .empty-state {
     text-align: center;
     padding: 40px;
-    color: #718096;
+    color: var(--text-light);
     font-size: 16px;
 }
 
 .error {
     text-align: center;
     padding: 40px;
-    color: #e74c3c;
+    color: var(--danger);
 }
 
 /* Modal */
@@ -246,10 +298,16 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .modal-content {
-    background: white;
+    background: var(--white);
     padding: 30px;
     border-radius: 8px;
     max-width: 500px;
@@ -257,25 +315,33 @@ body {
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .close-modal {
     position: absolute;
     top: 15px;
     right: 20px;
-    font-size: 24px;
+    font-size: 28px;
     cursor: pointer;
     color: #999;
+    transition: color 0.2s;
 }
 
 .close-modal:hover {
-    color: #333;
+    color: var(--text);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
         width: 60px;
+        padding: 10px 0;
     }
     
     .sidebar-header h2 {
@@ -286,8 +352,14 @@ body {
         display: none;
     }
     
+    .sidebar-menu a {
+        padding: 12px;
+        justify-content: center;
+    }
+    
     .main-content {
         margin-left: 60px;
+        padding: 10px;
     }
     
     .stat-card {
@@ -299,4 +371,29 @@ body {
         margin-right: 0;
         margin-bottom: 10px;
     }
-  }
+    
+    .top-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--light);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
