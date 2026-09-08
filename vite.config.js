@@ -1,23 +1,33 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { existsSync, readdirSync } from 'fs';
+
+// Auto-detect all HTML files
+const htmlFiles = {};
+const rootDir = process.cwd();
+const files = readdirSync(rootDir);
+
+files.forEach(file => {
+    if (file.endsWith('.html') && file !== 'index.html') {
+        const name = file.replace('.html', '');
+        htmlFiles[name] = resolve(rootDir, file);
+    }
+});
+
+// Add index.html
+htmlFiles.main = resolve(rootDir, 'index.html');
 
 export default defineConfig({
     build: {
         rollupOptions: {
-            input: {
-                main: resolve(__dirname, 'index.html'),
-                login: resolve(__dirname, 'login.html'),
-                dashboard: resolve(__dirname, 'dashboard.html'),
-                devices: resolve(__dirname, 'devices.html'),
-                camera: resolve(__dirname, 'camera.html'),
-                settings: resolve(__dirname, 'settings.html'),
-                client: resolve(__dirname, 'client.html'),
-                '404': resolve(__dirname, '404.html')
-            },
+            input: htmlFiles,
             output: {
                 manualChunks: {
                     vendor: ['firebase', 'socket.io-client']
-                }
+                },
+                assetFileNames: 'assets/[name].[hash].[ext]',
+                chunkFileNames: 'assets/[name].[hash].js',
+                entryFileNames: 'assets/[name].[hash].js'
             }
         },
         sourcemap: false,
@@ -33,5 +43,8 @@ export default defineConfig({
     },
     preview: {
         port: 3000
+    },
+    optimizeDeps: {
+        include: ['firebase', 'socket.io-client']
     }
 });
