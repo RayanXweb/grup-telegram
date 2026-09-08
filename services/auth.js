@@ -5,7 +5,9 @@ import {
     signOut, 
     sendPasswordResetEmail,
     onAuthStateChanged,
-    getIdToken
+    getIdToken,
+    setPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 import { firebaseConfig } from '../config/firebase-config.js';
 
@@ -14,11 +16,14 @@ let app = null;
 
 export function initializeAuth() {
     if (!app) {
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        
-        // Enable persistence
-        auth.setPersistence('local');
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            setPersistence(auth, browserLocalPersistence);
+        } catch (error) {
+            console.error('Failed to initialize Firebase:', error);
+            throw error;
+        }
     }
     return auth;
 }
@@ -29,6 +34,7 @@ export async function login(email, password) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         return userCredential.user;
     } catch (error) {
+        console.error('Login error:', error);
         throw error;
     }
 }
@@ -38,6 +44,7 @@ export async function logout() {
         const auth = initializeAuth();
         await signOut(auth);
     } catch (error) {
+        console.error('Logout error:', error);
         throw error;
     }
 }
@@ -47,6 +54,7 @@ export async function resetPassword(email) {
         const auth = initializeAuth();
         await sendPasswordResetEmail(auth, email);
     } catch (error) {
+        console.error('Reset password error:', error);
         throw error;
     }
 }
@@ -66,7 +74,12 @@ export async function getAuthToken() {
     if (!user) {
         throw new Error('No authenticated user');
     }
-    return await getIdToken(user);
+    try {
+        return await getIdToken(user, true); // Force refresh
+    } catch (error) {
+        console.error('Failed to get auth token:', error);
+        throw error;
+    }
 }
 
 export function onAuthChange(callback) {
