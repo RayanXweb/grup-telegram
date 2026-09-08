@@ -1,9 +1,21 @@
 {
     "version": 2,
-    "rewrites": [
+    "builds": [
         {
-            "source": "/client/:deviceId",
-            "destination": "/client.html"
+            "src": "**/*.html",
+            "use": "@vercel/static-build"
+        },
+        {
+            "src": "assets/**/*",
+            "use": "@vercel/static-build"
+        },
+        {
+            "src": "config/**/*",
+            "use": "@vercel/static-build"
+        },
+        {
+            "src": "services/**/*",
+            "use": "@vercel/static-build"
         }
     ],
     "routes": [
@@ -15,8 +27,12 @@
             }
         },
         {
-            "src": "/(.*)\\.html",
-            "dest": "/$1.html"
+            "src": "/config/(.*)",
+            "dest": "/config/$1"
+        },
+        {
+            "src": "/services/(.*)",
+            "dest": "/services/$1"
         },
         {
             "src": "/client/(.*)",
@@ -71,10 +87,6 @@
                 {
                     "key": "Referrer-Policy",
                     "value": "strict-origin-when-cross-origin"
-                },
-                {
-                    "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://*.firebaseio.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.railway.app https://*.railway.app;"
                 }
             ]
         }
