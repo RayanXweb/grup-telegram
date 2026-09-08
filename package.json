@@ -14,10 +14,11 @@
         "socket.io-client": "^4.5.4"
     },
     "devDependencies": {
-        "vite": "^4.5.0"
+        "vite": "^4.5.0",
+        "@vitejs/plugin-legacy": "^5.2.0"
     },
     "engines": {
-        "node": ">=18.0.0"
+        "node": "18.x"
     },
     "keywords": [
         "device-monitor",
@@ -26,6 +27,6 @@
         "firebase",
         "socketio"
     ],
-    "author": "Your Name",
+    "author": "ROHMAN",
     "license": "MIT"
 }
