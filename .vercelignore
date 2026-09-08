@@ -10,3 +10,5 @@ node_modules/
 README.md
 .gitignore
 *.md
+package-lock.json
+yarn.lock
