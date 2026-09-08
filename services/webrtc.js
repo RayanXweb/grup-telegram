@@ -12,8 +12,12 @@ export class WebRTCService {
                           document.getElementById('clientVideo');
         this.candidates = [];
         this.isInitiator = false;
+        this.iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+        ];
         
-        // Signaling handlers
         this.setupSignaling();
     }
     
@@ -45,7 +49,8 @@ export class WebRTCService {
     
     async initialize(deviceId) {
         this.currentDeviceId = deviceId;
-        this.isInitiator = false; // Admin side is initiator
+        this.isInitiator = true;
+        return this;
     }
     
     async startStream(deviceId) {
@@ -57,7 +62,6 @@ export class WebRTCService {
         this.isInitiator = true;
         
         try {
-            // Get local media stream
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: this.currentFacingMode,
@@ -67,21 +71,17 @@ export class WebRTCService {
                 audio: false
             });
             
-            // Show local stream
             if (this.videoElement) {
                 this.videoElement.srcObject = this.localStream;
-                this.videoElement.play();
+                await this.videoElement.play();
             }
             
-            // Create peer connection
             await this.createPeerConnection();
             
-            // Add local tracks
             this.localStream.getTracks().forEach(track => {
                 this.peerConnection.addTrack(track, this.localStream);
             });
             
-            // Create and send offer
             const offer = await this.peerConnection.createOffer({
                 offerToReceiveVideo: true,
                 offerToReceiveAudio: false
@@ -99,7 +99,6 @@ export class WebRTCService {
                 this.callbacks.onStreamStarted();
             }
             
-            // Send stream info
             const track = this.localStream.getVideoTracks()[0];
             if (track && this.callbacks.onStreamInfo) {
                 const settings = track.getSettings();
@@ -113,27 +112,27 @@ export class WebRTCService {
         } catch (error) {
             console.error('Error starting stream:', error);
             this.stopStream();
+            if (this.callbacks.onError) {
+                this.callbacks.onError(error);
+            }
             throw error;
         }
     }
     
-    async stopStream() {
+    stopStream() {
         this.isStreaming = false;
         this.isInitiator = false;
         
-        // Stop local tracks
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
         }
         
-        // Close peer connection
         if (this.peerConnection) {
             this.peerConnection.close();
             this.peerConnection = null;
         }
         
-        // Clear video
         if (this.videoElement) {
             this.videoElement.srcObject = null;
         }
@@ -141,7 +140,6 @@ export class WebRTCService {
         this.remoteStream = null;
         this.candidates = [];
         
-        // Notify hangup
         if (this.currentDeviceId) {
             this.socket.emit('webrtc:hangup', {
                 deviceId: this.currentDeviceId
@@ -158,11 +156,9 @@ export class WebRTCService {
             return;
         }
         
-        // Toggle facing mode
         this.currentFacingMode = this.currentFacingMode === 'environment' ? 
             'user' : 'environment';
         
-        // Get new stream
         const newStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: this.currentFacingMode,
@@ -172,7 +168,6 @@ export class WebRTCService {
             audio: false
         });
         
-        // Replace tracks
         const oldTracks = this.localStream.getTracks();
         const newTracks = newStream.getTracks();
         
@@ -183,31 +178,30 @@ export class WebRTCService {
         
         newTracks.forEach(track => {
             this.localStream.addTrack(track);
-            this.peerConnection.addTrack(track, this.localStream);
+            if (this.peerConnection) {
+                this.peerConnection.addTrack(track, this.localStream);
+            }
         });
         
         this.localStream = newStream;
         
-        // Update video
         if (this.videoElement) {
             this.videoElement.srcObject = this.localStream;
         }
         
-        // Re-negotiate
-        const offer = await this.peerConnection.createOffer();
-        await this.peerConnection.setLocalDescription(offer);
-        this.socket.emit('webrtc:offer', {
-            deviceId: this.currentDeviceId,
-            offer: offer
-        });
+        if (this.peerConnection) {
+            const offer = await this.peerConnection.createOffer();
+            await this.peerConnection.setLocalDescription(offer);
+            this.socket.emit('webrtc:offer', {
+                deviceId: this.currentDeviceId,
+                offer: offer
+            });
+        }
     }
     
     async createPeerConnection() {
         const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
+            iceServers: this.iceServers
         };
         
         this.peerConnection = new RTCPeerConnection(configuration);
@@ -236,7 +230,7 @@ export class WebRTCService {
                     this.callbacks.onConnectionStateChange(state);
                 }
                 
-                if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+                if (['failed', 'closed', 'disconnected'].includes(state)) {
                     if (this.isStreaming) {
                         this.stopStream();
                     }
@@ -244,7 +238,6 @@ export class WebRTCService {
             }
         };
         
-        // Add buffered candidates
         for (const candidate of this.candidates) {
             await this.peerConnection.addIceCandidate(candidate);
         }
@@ -259,7 +252,6 @@ export class WebRTCService {
         try {
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
             
-            // Create answer
             const answer = await this.peerConnection.createAnswer({
                 offerToReceiveVideo: true,
                 offerToReceiveAudio: false
@@ -274,6 +266,9 @@ export class WebRTCService {
             this.isStreaming = true;
         } catch (error) {
             console.error('Error handling offer:', error);
+            if (this.callbacks.onError) {
+                this.callbacks.onError(error);
+            }
         }
     }
     
@@ -288,6 +283,9 @@ export class WebRTCService {
             );
         } catch (error) {
             console.error('Error handling answer:', error);
+            if (this.callbacks.onError) {
+                this.callbacks.onError(error);
+            }
         }
     }
     
@@ -305,4 +303,4 @@ export class WebRTCService {
             console.error('Error adding ICE candidate:', error);
         }
     }
-                    }
+}
