@@ -3,18 +3,19 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
 if (!SOCKET_URL) {
-    console.warn('VITE_SOCKET_URL is not set. Socket connections will fail.');
+    console.warn('⚠️ VITE_SOCKET_URL is not set');
 }
 
 class SocketService {
     constructor() {
         this.socket = null;
-        this.token = null;
-        this.deviceId = null;
         this.isConnected = false;
         this.listeners = new Map();
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
+        this.token = null;
+        this.deviceId = null;
+        this.heartbeatInterval = null;
     }
     
     initialize(token, options = {}) {
@@ -47,13 +48,17 @@ class SocketService {
         this.socket.on('connect', () => {
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            console.log('Socket connected');
+            console.log('🔌 Socket connected');
             this.emit('client:connect', { deviceId: this.deviceId });
+            
+            // Start heartbeat
+            this.startHeartbeat();
         });
         
         this.socket.on('disconnect', (reason) => {
             this.isConnected = false;
-            console.log('Socket disconnected:', reason);
+            console.log('🔌 Socket disconnected:', reason);
+            this.stopHeartbeat();
         });
         
         this.socket.on('connect_error', (error) => {
@@ -66,15 +71,30 @@ class SocketService {
             }
         });
         
-        // Heartbeat
-        this.socket.on('heartbeat', (data) => {
-            this.emit('client:heartbeat', { 
-                deviceId: this.deviceId,
-                timestamp: Date.now()
-            });
+        this.socket.on('error', (error) => {
+            console.error('Socket error:', error);
         });
         
         return this.socket;
+    }
+    
+    startHeartbeat() {
+        this.stopHeartbeat();
+        this.heartbeatInterval = setInterval(() => {
+            if (this.isConnected) {
+                this.emit('client:heartbeat', {
+                    deviceId: this.deviceId,
+                    timestamp: Date.now()
+                });
+            }
+        }, 30000);
+    }
+    
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
     }
     
     on(event, callback) {
@@ -114,20 +134,13 @@ class SocketService {
     }
     
     disconnect() {
+        this.stopHeartbeat();
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
             this.isConnected = false;
             this.listeners.clear();
         }
-    }
-    
-    get isConnected() {
-        return this._isConnected;
-    }
-    
-    set isConnected(value) {
-        this._isConnected = value;
     }
 }
 
