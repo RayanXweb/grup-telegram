@@ -1,6 +1,7 @@
 .camera-controls {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .camera-controls button {
@@ -9,7 +10,8 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
+    font-weight: 500;
 }
 
 .camera-controls button:disabled {
@@ -18,7 +20,7 @@
 }
 
 .btn-start {
-    background: #27ae60;
+    background: var(--success);
     color: white;
 }
 
@@ -27,7 +29,7 @@
 }
 
 .btn-stop {
-    background: #e74c3c;
+    background: var(--danger);
     color: white;
 }
 
@@ -45,7 +47,7 @@
 }
 
 .camera-container {
-    background: #1a1a2e;
+    background: var(--dark);
     border-radius: 8px;
     padding: 20px;
     margin-top: 20px;
@@ -62,45 +64,60 @@
     max-height: 600px;
     object-fit: contain;
     border-radius: 4px;
+    background: #000;
 }
 
 .camera-status {
     position: absolute;
     top: 30px;
     right: 30px;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.8);
     color: white;
     padding: 8px 16px;
     border-radius: 20px;
     font-size: 14px;
     z-index: 10;
+    backdrop-filter: blur(10px);
 }
 
 .status-text {
     font-weight: 500;
 }
 
+.status-text.success { color: #27ae60; }
+.status-text.error { color: #e74c3c; }
+.status-text.info { color: #4a90e2; }
+
 .stream-info {
     color: rgba(255,255,255,0.7);
     font-size: 12px;
     margin-top: 10px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 12px;
+    border-radius: 12px;
 }
 
 .connection-status {
     margin-top: 15px;
     text-align: center;
-    color: #718096;
+    color: var(--text-light);
     font-size: 14px;
+    padding: 8px;
+    background: var(--white);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 @media (max-width: 768px) {
     .camera-controls {
-        flex-wrap: wrap;
+        justify-content: center;
     }
     
     .camera-controls button {
         flex: 1;
-        min-width: 100px;
+        min-width: 80px;
+        font-size: 12px;
+        padding: 6px 12px;
     }
     
     .camera-status {
@@ -108,5 +125,10 @@
         right: 15px;
         font-size: 12px;
         padding: 4px 12px;
+    }
+    
+    .camera-container {
+        min-height: 250px;
+        padding: 10px;
     }
 }
